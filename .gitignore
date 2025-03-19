@@ -1,5 +1,9 @@
-bin/
-obj/
-/packages/
-riderModule.iml
-/_ReSharper.Caches/
+[Dd]ebug/
+[Rr]elease/
+x64/
+[Bb]in/
+[Oo]bj/
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
