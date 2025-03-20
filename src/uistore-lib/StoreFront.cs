@@ -11,6 +11,8 @@ namespace CloudInteractive.UniFiStore;
 
 public enum StoreRegion { US, CA, EU, JP, TW, SG, ME }
 
+public class BuildIdNotFoundException : Exception;
+
 public class StoreFront
 {
     private const string GraphQlApiEndPoint = "https://ecomm.svc.ui.com/graphql";
@@ -53,7 +55,7 @@ public class StoreFront
         var regex = new Regex("\"buildId\"\\s*:\\s*\"(?<buildId>[^\"]+)\"");
         var match = regex.Match(body);
 
-        if (!match.Success) throw new BuildIdException("There is no buildId");
+        if (!match.Success) throw new BuildIdNotFoundException();
         _buildId = match.Groups["buildId"].Value;
     }
 
@@ -81,20 +83,21 @@ public class StoreFront
         await _updateLock.WaitAsync();
         try
         {
-            if(!await _checkBuildIdAsync()) await _setBuildIdAsync();
+            if (!await _checkBuildIdAsync()) await _setBuildIdAsync();
             _productList.Clear();
             foreach (string category in CategoryList)
             {
                 using var response = await _client.GetAsync(
-                    $"{StoreRegionTable[Region].Item1}/_next/data/{_buildId}/{StoreRegionTable[Region].Item2}/en.json?category={category}&language=en", HttpCompletionOption.ResponseHeadersRead);
-                if(!response.IsSuccessStatusCode) continue;
-                
+                    $"{StoreRegionTable[Region].Item1}/_next/data/{_buildId}/{StoreRegionTable[Region].Item2}/en.json?category={category}&language=en",
+                    HttpCompletionOption.ResponseHeadersRead);
+                if (!response.IsSuccessStatusCode) continue;
+
                 using var streamReader = new StreamReader(await response.Content.ReadAsStreamAsync());
                 await using var textReader = new JsonTextReader(streamReader);
                 var serializer = new JsonSerializer();
 
                 dynamic json = serializer.Deserialize(textReader)!;
-                if(json.pageProps.subCategories is null) continue;
+                if (json.pageProps.subCategories is null) continue;
                 foreach (var subCategory in json.pageProps.subCategories)
                 {
                     foreach (var product in subCategory.products)
