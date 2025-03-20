@@ -30,8 +30,6 @@ public class Product
         foreach (Variant v in VariantsList)
             builder.Append(
                 $"   - {v.Sku}, Avaliable:{v.Quantity}, Price:{(v.Amount / 100.0).ToString("F2")}{v.Currency}, HasUICare:{v.HasUiCare.ToString()}\n");
-        builder.Append("\n");
-
         return builder.ToString();
     }
 }
