@@ -3,6 +3,7 @@
  *  Copyright (C) 2025 Coppermine-SP
  */
 using System.Collections.ObjectModel;
+using System.Text;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
 
@@ -101,6 +102,7 @@ public class StoreFront
                         var newProduct = new Product
                         {
                             Id = product.id,
+                            Name = product.name,
                             Title = product.title,
                             Category = subCategory.id,
                             Description = product.shortDescription,
@@ -130,16 +132,30 @@ public class StoreFront
         }
     }
 
-    public async void UpdateQuantityAsync()
+    public async Task<bool> UpdateQuantityAsync(Product p)
     {
-        await _updateLock.WaitAsync();
-        try
+        bool hasChanged = false;
+        var serializer = new JsonSerializer();
+        foreach (var v in p.VariantsList)
         {
+            var request =
+                $"{{\"operationName\":\"ValidateCart\",\"variables\":{{\"storeId\":\"{StoreRegionTable[Region].Item2}\",\"items\":[{{\"storeProductVariantId\":\"{v.Id}\",\"quantity\":100000}}]}},\"query\":\"query ValidateCart($storeId: StoreId!, $items: [CartItem!]!, $checkoutId: UUID) {{\\n  validateCart(storeId: $storeId, items: $items, checkoutId: $checkoutId)\\n}}\"}}";
+            using var response = await _client.PostAsync(GraphQlApiEndPoint, new StringContent(request, Encoding.UTF8, "application/json"));
             
+            using var streamReader = new StreamReader(await response.Content.ReadAsStreamAsync());
+            await using var textReader = new JsonTextReader(streamReader);
+            
+            dynamic json = serializer.Deserialize(textReader)!;
+            if(json.errors[0] is null || !json.errors[0].message.ToString().Equals("Cart item(s) failed limitation(s)")) continue;
+
+            uint quantityAllowed = Convert.ToUInt32(json.errors[0].extensions.limitationReasons[0].quantityAllowed);
+            if (quantityAllowed != v.Quantity)
+            {
+                hasChanged = true;
+                v.Quantity = quantityAllowed;
+            }
         }
-        finally
-        {
-            _updateLock.Release();
-        }
+
+        return hasChanged;
     }
 }
