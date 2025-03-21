@@ -7,11 +7,11 @@ namespace CloudInteractive.UniFiStore;
 public class Variant
 {
     internal Variant() {}
-    public string Id { get; internal set; }
-    public string Sku { get; internal set; }
-    public uint Amount { get; internal set; }
-    public string Currency { get; internal set; }
-    public bool HasUiCare { get; internal set; }
+    public string Id { get; internal init; }
+    public string Sku { get; internal init; }
+    public uint Amount { get; internal init; }
+    public string Currency { get; internal init; }
+    public bool HasUiCare { get; internal init; }
     
     public uint Quantity { get; internal set; }
 }
